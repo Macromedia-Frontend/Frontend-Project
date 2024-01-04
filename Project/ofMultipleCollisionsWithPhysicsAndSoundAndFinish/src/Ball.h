@@ -89,7 +89,7 @@ public:
 
 private:
 	float alpha;
-	glm::vec2 velocity;
+	glm::vec2 velocity, velocityOld;
 	glm::vec2 gravity;
 	glm::vec2 tempLocation;
 };

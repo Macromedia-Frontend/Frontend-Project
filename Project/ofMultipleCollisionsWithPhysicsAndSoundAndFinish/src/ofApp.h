@@ -8,11 +8,13 @@
 #include "envelopes.h"
 #include "noise.h"
 #include "Finish.h"
+#include "ofxDatGui.h"
 
 class ofApp : public ofBaseApp{
 
 	public:
 		void setup();
+        void setupFinish();
 		void update();
 		void draw();
 
@@ -44,10 +46,12 @@ class ofApp : public ofBaseApp{
 		bool mouseLeftPressedOnce = true;
 		bool mouseRightPressedOnce = true;
 
-		bool audioTrigger;
+		bool audioTriggerLines;
+        bool audioTriggerTest;
 
 		float MAX_FREQ_OFFSET;
 		float MAX_FREQ_RANGE;
+        float SPREAD;
 
 		ofSoundStream soundStream;
 		float frequency;
@@ -85,7 +89,7 @@ class ofApp : public ofBaseApp{
             std::cout << devices[i] << "\n";
         }
         
-        settings.setOutDevice(devices[1]);
+        settings.setOutDevice(devices[0]);
         settings.setOutListener(this);
         settings.numOutputChannels = 1;
         settings.sampleRate = 44100;
@@ -117,4 +121,14 @@ class ofApp : public ofBaseApp{
     float len;
     glm::vec2 linesize;
     std::string statbox;
+
+    bool collideTest;
+    std::vector<std::shared_ptr<evelopeGenerator>> testEnv;
+    std::vector<std::shared_ptr<noiseGenerator>> testNoise;
+    float testOutput;
+    
+    ofxDatGui* gui;
+    void onSliderEvent(ofxDatGuiSliderEvent e);
+    float klang_höhe_Slider = 100;
+    float physik_gravity_Slider = 0;
 };

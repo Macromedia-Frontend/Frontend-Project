@@ -6,7 +6,10 @@
 class evelopeGenerator
 {
 public:
-	evelopeGenerator(const size_t& pCycleCount) : index(0), phase(0), lifeTime(true), cycleCount(pCycleCount) {}
+	evelopeGenerator(const float& pTimeCount) : index(0), phase(0), lifeTime(true), stopTimeInSeconds(pTimeCount) 
+	{
+		startTimeStamp = clock();
+	}
 	~evelopeGenerator() {}
 
 	inline float play(const std::vector<float>& pBreakpoints)
@@ -36,8 +39,7 @@ public:
 			phase = pBreakpoints[pBreakpoints.size() - 2];
 		}
 
-		cycleCount--;
-		if (cycleCount <= 0)
+		if ((clock() - startTimeStamp) / CLOCKS_PER_SEC > stopTimeInSeconds)
 		{
 			lifeTime = false;
 		}
@@ -53,6 +55,7 @@ public:
 	bool lifeTime;
 
 private:
-	float index, phase;
-	size_t cycleCount;
+	float phase, stopTimeInSeconds;
+	size_t index;
+	clock_t startTimeStamp;
 };
