@@ -6,7 +6,7 @@
 class Ball
 {
 public:
-	Ball(const glm::vec2& pPos, const float& pAlpha, const float& pRadius, const float& pMAX_BALL_RADIUS, const glm::vec2& pVelocity, const glm::vec2& pGravity) : location(pPos), alpha(pAlpha), velocity(pVelocity), gravity(pGravity), radius(pRadius), MAX_BALL_RADIUS(pMAX_BALL_RADIUS), collideLines(false), lineCircleProperies(0){}
+	Ball(const glm::vec2& pPos, const float& pAlpha, const float& pRadius, const float& pMAX_BALL_RADIUS, const glm::vec2& pVelocity, const glm::vec2& pGravity) : location(pPos), alpha(pAlpha), velocity(pVelocity), gravity(pGravity), radius(pRadius), MAX_BALL_RADIUS(pMAX_BALL_RADIUS), collideLines(false), lineCircleProperies(0), lifetime(pAlpha), isExpired(false) {}
 
 	void update(std::vector<Ball> pBalls, std::vector<drawLine> pLines)
 	{
@@ -15,8 +15,9 @@ public:
 		location += velocity;
 		velocity += gravity;
 
-		float weight = 1 - radius / MAX_BALL_RADIUS;
+		float weight = 1 - (radius / MAX_BALL_RADIUS);
 		location += velocity *= weight;
+		lifetime -= weight * 0.1;
 
 		for (int bI = pBalls.size() - 1; bI >= 0; bI--)
 		{
@@ -70,26 +71,33 @@ public:
 
 				collideLines = true;
 			}
+
+			if (lifetime <= 0)
+			{
+				isExpired = true;
+			}
 		}
 	}
 
 	void draw()
 	{
-		ofSetColor(0, 0, 0, alpha);
+		ofSetColor(0, 0, 0, lifetime);
 		ofFill();
 		ofDrawCircle(location, radius);
 	}
+
+	bool isExpired;
 
 	float lineCircleProperies;
 	bool collideLines;
 
 	float MAX_BALL_RADIUS;
 	float radius;
-	glm::vec2 location;
+	glm::vec2 location, velocity;
 
 private:
-	float alpha;
-	glm::vec2 velocity, velocityOld;
+	float alpha, lifetime;
+	glm::vec2 velocityOld;
 	glm::vec2 gravity;
 	glm::vec2 tempLocation;
 };

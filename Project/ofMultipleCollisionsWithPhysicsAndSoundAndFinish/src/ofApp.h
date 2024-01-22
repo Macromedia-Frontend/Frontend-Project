@@ -32,16 +32,14 @@ class ofApp : public ofBaseApp{
 		void audioOut(ofSoundBuffer& buffer);
 
 		float MAX_LINE_LENGTH;
-		float MAX_BALL_RADIUS;
+		float MAX_BALL_RADIUS = 160;
 
-        glm::vec2 GRAVITY;
+        glm::vec2 GRAVITY = glm::vec2(0.0, 0.01);
 
 		std::vector<Ball> balls;
 		glm::vec2 lineStartPosition, lineEndPosition;
 		std::vector<drawLine> lines;
     
-        drawFinish finish;
-
 		glm::vec2 calcDirStart, calcDirEnd;
 		bool mouseLeftPressedOnce = true;
 		bool mouseRightPressedOnce = true;
@@ -49,9 +47,9 @@ class ofApp : public ofBaseApp{
 		bool audioTriggerLines;
         bool audioTriggerTest;
 
-		float MAX_FREQ_OFFSET;
-		float MAX_FREQ_RANGE;
-        float SPREAD;
+		float MAX_FREQ_OFFSET = 100;
+		float MAX_FREQ_RANGE = 500;
+        float SPREAD = 2;
 
 		ofSoundStream soundStream;
 		float frequency;
@@ -98,23 +96,61 @@ class ofApp : public ofBaseApp{
         soundStream.setup(settings);
     }
     
-    bool gameFinished() {
-        for (int i = balls.size() - 1; i >= 0; i--)
-        {
-            float distanceToFinish = glm::distance(balls[i].location, finish.getPos());
-            
-            if(distanceToFinish < finish.getRadius()){
-                return true;
-            }
-        }
-        return false;
+    float finishRadius = 50;
+    float minMarginToEdge = 100;
+    std::vector<drawFinish> finishes;
+    std::vector<glm::vec2> finishPositions;
+
+    glm::vec2 generateFinishPosition(const float& pMinMarginToEdge)
+    {
+        return glm::vec2(ofRandom(pMinMarginToEdge, ofGetWindowWidth() - pMinMarginToEdge), ofRandom(pMinMarginToEdge, ofGetWindowHeight() - pMinMarginToEdge));
     }
-    
-    void resetScreen(){
-        balls.clear();
-        lines.clear();
-        
-        setup();
+
+    void teleportBalls() {
+
+        for (int i = 0; i < finishes.size(); i++)
+        {
+
+            int indexOfNextFinish = 0;
+            if (i == finishes.size() - 1) {
+                indexOfNextFinish = 0;
+            }
+            else
+            {
+                indexOfNextFinish = i + 1;
+            }
+
+            for (int j = 0; j < balls.size(); j++)
+            {
+                float distanceToFinish = glm::distance(balls[j].location, finishes[i].getPos());
+
+                if (distanceToFinish <= finishes[i].getRadius())
+                {
+                    setNewLocation(balls[j].location, finishes[indexOfNextFinish]);
+                    setAndAddNewVelocity(balls[j].velocity, finishes[indexOfNextFinish].getPos(), balls[j].location);
+                }
+            }
+
+        }
+    }
+
+    void setAndAddNewVelocity(glm::vec2& velocity, glm::vec2 center, glm::vec2& location) {
+
+        glm::vec2 normal = glm::normalize(location - center);
+        float velocityMagnitude = glm::length(velocity);
+        velocity = normal * velocityMagnitude;
+        location += velocity;
+    }
+
+    void setNewLocation(glm::vec2& location, drawFinish nextFinish) {
+
+        glm::vec2 centerOfNextFinish = nextFinish.getPos();
+        float gapMiddleDegreesOfNextFinish = nextFinish.getRotation() + nextFinish.getDegrees() + (360 - nextFinish.getDegrees()) / 2;
+        float gapMiddleRadOfNextFinish = ofDegToRad(gapMiddleDegreesOfNextFinish);
+        float x = centerOfNextFinish.x + nextFinish.getRadius() * cos(gapMiddleRadOfNextFinish);
+        float y = centerOfNextFinish.y + nextFinish.getRadius() * sin(gapMiddleRadOfNextFinish);
+        glm::vec2 centerOfGapOfNextFinish = glm::vec2(x, y);
+        location = centerOfGapOfNextFinish;
     }
 
     double degree;
@@ -129,6 +165,5 @@ class ofApp : public ofBaseApp{
     
     ofxDatGui* gui;
     void onSliderEvent(ofxDatGuiSliderEvent e);
-    float klang_höhe_Slider = 100;
-    float physik_gravity_Slider = 0;
+    bool GUI_Toggle = false;
 };

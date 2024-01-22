@@ -15,8 +15,11 @@ void ofApp::setup()
 	gui->setAutoDraw(false);
 
 	gui->addHeader("Settings");
-	gui->addSlider("Tonhöhe", 0, 1000, 100);
-	gui->addSlider("Gravity", 0, 0.25, 0);
+	gui->addSlider("Offset", 0, 1000, 100);
+	gui->addSlider("Gravity", 0, 0.1, 0.01);
+	gui->addSlider("Range", 0, 1000, 500);
+	gui->addSlider("MaxBallSize", 1, 320, 160);
+	gui->addSlider("Spread", 1, 5, 2);
 
 	gui->onSliderEvent(this, &ofApp::onSliderEvent);
 }
@@ -24,10 +27,56 @@ void ofApp::setup()
 //--------------------------------------------------------------
 void ofApp::setupFinish()
 {
-	finish = drawFinish(glm::vec2(ofRandom(ofGetWindowWidth()), ofRandom(ofGetWindowHeight())), 270, ofRandom(360));
-	if (finish.line.size() >= 2) {
-		for (int i = 0; i < finish.line.size() - 1; i++) {
-			lines.push_back(drawLine(finish.line[i], finish.line[i + 1], ofColor(255, 0, 0)));
+
+	finishPositions.push_back(generateFinishPosition(minMarginToEdge));
+
+	while (finishPositions.size() != 10)
+	{
+		if (finishPositions.size() == 0)
+		{
+			glm::vec2 temp_pos_1 = generateFinishPosition(minMarginToEdge);
+			finishPositions.push_back(glm::vec2(temp_pos_1));
+			std::cout << temp_pos_1.x << " " << temp_pos_1.y << std::endl;
+		}
+
+		glm::vec2 temp_pos_2 = generateFinishPosition(minMarginToEdge);
+		glm::vec2 randomPos = glm::vec2(temp_pos_2);
+		std::cout << temp_pos_2.x << " " << temp_pos_2.y << std::endl;
+
+		bool inRange = false;
+		for (int i = 0; i < finishPositions.size(); i++)
+		{
+			float dist_x = finishPositions[i].x - randomPos.x;
+			float dist_y = finishPositions[i].y - randomPos.y;
+			float distance = std::sqrt(dist_x * dist_x + dist_y * dist_y);
+
+			if (distance <= finishRadius * 2)
+			{
+				inRange = true;
+				break;
+			}
+		}
+
+		if (!inRange)
+		{
+			finishPositions.push_back(randomPos);
+		}
+	}
+
+	if (finishPositions.size() == 10)
+	{
+		for (int i = 0; i < finishPositions.size(); i++)
+		{
+			std::cout << "true" << finishPositions[i].x << " " << finishPositions[i].y << std::endl;
+			finishes.push_back(drawFinish(finishPositions[i], 270, ofRandom(360), finishRadius));
+		}
+	}
+
+	for (int i = 0; i < finishes.size(); i++) {
+		if (finishes[i].line.size() >= 2) {
+			for (int j = 0; j < finishes[i].line.size() - 1; j++) {
+				lines.push_back(drawLine(finishes[i].line[j], finishes[i].line[j + 1], ofColor(255, 0, 0)));
+			}
 		}
 	}
 }
@@ -37,17 +86,12 @@ void ofApp::update()
 {
 	gui->update();
 
-	MAX_BALL_RADIUS = 160;
-	GRAVITY = glm::vec2(0.0, physik_gravity_Slider);
-	MAX_FREQ_OFFSET = klang_höhe_Slider;
-	MAX_FREQ_RANGE = 500;
-	SPREAD = 10;
-	
+
 	for (int i = balls.size() - 1; i >= 0; i--)
 	{
 		balls[i].update(balls, lines);
 
-		if (balls[i].location.x - balls[i].radius < 0 || balls[i].location.x + balls[i].radius > ofGetWidth() || balls[i].location.y + balls[i].radius > ofGetHeight())
+		if (balls[i].location.x - balls[i].radius < 0 || balls[i].location.x + balls[i].radius > ofGetWidth() || balls[i].location.y + balls[i].radius > ofGetHeight() || balls[i].isExpired)
 		{
 			balls.erase(balls.begin() + i);
 		}
@@ -66,14 +110,18 @@ void ofApp::update()
 			collideTest = false;
 		}
 	}
+	teleportBalls();
 }
 
 //--------------------------------------------------------------
 void ofApp::draw()
 {
-	gui->draw();
+	if (GUI_Toggle) gui->draw();
 
-    finish.draw();
+	for (int i = 0; i < finishes.size(); i++)
+	{
+		finishes[i].draw();
+	}
     
     for (int i = 0; i < balls.size(); i++)
 	{
@@ -114,6 +162,16 @@ void ofApp::draw()
 		ofSetColor(0);
 		ofDrawBitmapString(statbox, ofGetMouseX() + 25, ofGetMouseY() - 25);
 	}
+
+	if (finishPositions.size() == 10)
+	{
+		for (int i = 0; i < finishPositions.size(); i++)
+		{
+			ofSetColor(0, 0, 255);
+			ofFill();
+			ofDrawCircle(finishPositions[i], 10);
+		}
+	}
 }
 
 //--------------------------------------------------------------
@@ -124,11 +182,66 @@ void ofApp::keyPressed(int key)
 		audioTriggerTest = true;
 	}
 
+	if (key == 'g')
+	{
+		GUI_Toggle = !GUI_Toggle;
+	}
+
 	if (key == 's')
 	{
 		ofImage img;
 		img.grabScreen(0, 0, ofGetWidth(), ofGetHeight());
 		ofSaveImage(img, "mySnapshot.png");
+	}
+
+	if (key == 't')
+	{
+		if (finishPositions.size() == 0)
+		{
+			glm::vec2 temp_pos_1 = generateFinishPosition(minMarginToEdge);
+			finishPositions.push_back(glm::vec2(temp_pos_1));
+			std::cout << temp_pos_1.x << " " << temp_pos_1.y << std::endl;
+		}
+
+		glm::vec2 temp_pos_2 = generateFinishPosition(minMarginToEdge);
+		glm::vec2 randomPos = glm::vec2(temp_pos_2);
+		std::cout << temp_pos_2.x << " " << temp_pos_2.y << std::endl;
+
+		bool inRange = false;
+		for (int i = 0; i < finishPositions.size(); i++)
+		{
+			float dist_x = finishPositions[i].x - randomPos.x;
+			float dist_y = finishPositions[i].y - randomPos.y;
+			float distance = std::sqrt(dist_x * dist_x + dist_y * dist_y);
+
+			if (distance <= finishRadius * 2)
+			{
+				inRange = true;
+				break;
+			}
+		}
+
+		if (!inRange)
+		{
+			finishPositions.push_back(randomPos);
+		}
+
+		if (finishPositions.size() == 10)
+		{
+			for (int i = 0; i < finishPositions.size(); i++)
+			{
+				std::cout << "true" << finishPositions[i].x << " " << finishPositions[i].y << std::endl;
+				finishes.push_back(drawFinish(finishPositions[i], 270, ofRandom(360), finishRadius));
+			}
+		}
+
+		for (int i = 0; i < finishes.size(); i++) {
+			if (finishes[i].line.size() >= 2) {
+				for (int j = 0; j < finishes[i].line.size() - 1; j++) {
+					lines.push_back(drawLine(finishes[i].line[j], finishes[i].line[j + 1], ofColor(255, 0, 0)));
+				}
+			}
+		}
 	}
 }
 
@@ -150,7 +263,7 @@ void ofApp::mouseDragged(int x, int y, int button){
 //--------------------------------------------------------------
 void ofApp::mousePressed(int x, int y, int button)
 {
-	if (button == 0 && mouseLeftPressedOnce)
+	if (button == 0 && mouseLeftPressedOnce && !GUI_Toggle)
 	{
 		lineStartPosition = glm::vec2(ofGetMouseX(), ofGetMouseY());
 		mouseLeftPressedOnce = false;
@@ -159,6 +272,8 @@ void ofApp::mousePressed(int x, int y, int button)
 	if (button == 1)
 	{
 		lines.clear();
+		finishes.clear();
+		finishPositions.clear();
 		setupFinish();
 	}
 
@@ -172,7 +287,7 @@ void ofApp::mousePressed(int x, int y, int button)
 //--------------------------------------------------------------
 void ofApp::mouseReleased(int x, int y, int button)
 {
-	if (button == 0)
+	if (button == 0 && !GUI_Toggle)
 	{
 		lineEndPosition = glm::vec2(x, y);
 		lines.push_back(drawLine(lineStartPosition, lineEndPosition, ofColor(0, 0, 0)));
@@ -291,7 +406,10 @@ void ofApp::audioOut(ofSoundBuffer& buffer)
 //--------------------------------------------------------------
 void ofApp::onSliderEvent(ofxDatGuiSliderEvent e) 
 {
-	if (e.target->is("Tonhöhe")) klang_höhe_Slider = e.value;
-	if (e.target->is("Gravity")) physik_gravity_Slider = e.value;
+	if (e.target->is("MaxBallSize")) MAX_BALL_RADIUS = e.value;
+	if (e.target->is("Gravity")) GRAVITY = glm::vec2(0.0, e.value);
+	if (e.target->is("Range")) MAX_FREQ_RANGE = e.value;
+	if (e.target->is("Offset")) MAX_FREQ_OFFSET = e.value;
+	if (e.target->is("Spread")) SPREAD = e.value;
 }
 
